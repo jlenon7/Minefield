@@ -5,3 +5,4 @@
 # TODO
 
 - [ ] Refactor the game with Swing API
+- [ ] Refactor the game with Observer pattern
