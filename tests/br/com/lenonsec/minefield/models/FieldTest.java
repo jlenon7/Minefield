@@ -1,6 +1,5 @@
 package br.com.lenonsec.minefield.models;
 
-import br.com.lenonsec.minefield.exceptions.ExplosionException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import static org.junit.jupiter.api.Assertions.*;
@@ -98,15 +97,6 @@ public class FieldTest {
         field.toggleMarker();
 
         assertFalse(field.open());
-    }
-
-    @Test
-    void testOpenMinedAndNotMarkedField() {
-        field.addMine();
-
-        assertThrows(ExplosionException.class, () -> {
-           field.open();
-        });
     }
 
     @Test

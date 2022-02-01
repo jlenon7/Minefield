@@ -1,13 +1,14 @@
 package br.com.lenonsec.minefield.models;
 
+import br.com.lenonsec.minefield.contracts.FieldObserver;
+import br.com.lenonsec.minefield.enums.FieldEvent;
 import lombok.Getter;
-import lombok.ToString;
 import lombok.EqualsAndHashCode;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.ArrayList;
-
-import br.com.lenonsec.minefield.exceptions.ExplosionException;
+import java.util.Set;
 
 @Getter
 @EqualsAndHashCode
@@ -15,7 +16,9 @@ public class Field {
     private Boolean mined = false;
     private Boolean opened = false;
     private Boolean marked = false;
+
     private List<Field> neighbors = new ArrayList<Field>();
+    private Set<FieldObserver> observers = new HashSet<>();
 
     private final Integer x;
     private final Integer y;
@@ -23,6 +26,14 @@ public class Field {
     Field(Integer x, Integer y) {
         this.x = x;
         this.y = y;
+    }
+
+    public void registerObserver(FieldObserver observer) {
+        observers.add(observer);
+    }
+
+    private void notifyObservers(FieldEvent event) {
+        observers.forEach(o -> o.fire(this, event));
     }
 
     Boolean addNeighbor(Field neighbor) {
@@ -49,19 +60,26 @@ public class Field {
 
     void setOpened(Boolean opened) {
         this.opened = opened;
+
+        if (opened) notifyObservers(FieldEvent.OPEN);
     }
 
     void toggleMarker() {
         marked = !marked;
+
+        if (marked) notifyObservers(FieldEvent.MARK);
+        else notifyObservers(FieldEvent.UNMARK);
     }
 
     Boolean open() {
         if (!opened && !marked) {
-            opened = true;
-
             if (mined) {
-                throw new ExplosionException();
+                notifyObservers(FieldEvent.EXPLODE);
+
+                return true;
             }
+
+            setOpened(true);
 
             if (this.safeNeighborhood()) {
                 neighbors.forEach(Field::open);

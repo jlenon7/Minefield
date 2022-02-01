@@ -1,17 +1,20 @@
 package br.com.lenonsec.minefield.models;
 
-import br.com.lenonsec.minefield.exceptions.ExplosionException;
-
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
+import br.com.lenonsec.minefield.contracts.FieldObserver;
+import br.com.lenonsec.minefield.enums.FieldEvent;
 
-public class GameBoard {
+public class GameBoard implements FieldObserver {
     private Integer lines;
     private Integer columns;
     private Integer mines;
 
     private final List<Field> fields = new ArrayList<>();
+    private final List<Consumer<EventResult>> observers = new ArrayList<>();
 
     public GameBoard(Integer lines, Integer columns, Integer mines) {
         this.lines = lines;
@@ -23,24 +26,35 @@ public class GameBoard {
         raffleMines();
     }
 
-    public void open(Integer line, Integer colum) {
-        try {
-            fields
-                    .parallelStream()
-                    .filter(field -> field.getX() == line && field.getY() == colum)
-                    .findFirst()
-                    .ifPresent(Field::open);
-        } catch (ExplosionException e) {
-            fields.forEach(field -> field.setOpened(true));
+    public void registerObserver(Consumer<EventResult> observer) {
+        observers.add(observer);
+    }
 
-            throw e;
-        }
+    private void notifyObservers(Boolean result) {
+        observers.forEach(o -> o.accept(new EventResult(result)));
+    }
+
+    public void open(Integer line, Integer colum) {
+        fields
+                .parallelStream()
+                .filter(field -> Objects.equals(field.getX(), line) && Objects.equals(field.getY(), colum))
+                .findFirst()
+                .ifPresent(Field::open);
+    }
+
+    private void showMines() {
+        fields
+                .stream()
+                .filter(Field::getMined)
+                .forEach(field -> field.setOpened(true));
+
+        fields.forEach(field -> field.setOpened(true));
     }
 
     public void mark(Integer line, Integer colum) {
         fields
                 .parallelStream()
-                .filter(field -> field.getX() == line && field.getY() == colum)
+                .filter(field -> Objects.equals(field.getX(), line) && Objects.equals(field.getY(), colum))
                 .findFirst()
                 .ifPresent(Field::toggleMarker);
     }
@@ -48,7 +62,11 @@ public class GameBoard {
     private void generateFields() {
         for (int x = 0; x < lines; x++) {
             for (int y = 0; y < columns; y++) {
-                fields.add(new Field(x, y));
+                Field field = new Field(x, y);
+
+                field.registerObserver(this);
+
+                fields.add(field);
             }
         }
     }
@@ -110,5 +128,16 @@ public class GameBoard {
         }
 
         return stringBuilder.toString();
+    }
+
+    public void fire(Field field, FieldEvent event) {
+        if (event == FieldEvent.EXPLODE) {
+            System.out.println("Lost");
+            this.notifyObservers(false);
+            this.showMines();
+        } else {
+            System.out.println("Win");
+            this.notifyObservers(true);
+        }
     }
 }
