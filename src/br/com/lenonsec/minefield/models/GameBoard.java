@@ -9,9 +9,9 @@ import br.com.lenonsec.minefield.contracts.FieldObserver;
 import br.com.lenonsec.minefield.enums.FieldEvent;
 
 public class GameBoard implements FieldObserver {
-    private Integer lines;
-    private Integer columns;
-    private Integer mines;
+    private final Integer lines;
+    private final Integer columns;
+    private final Integer mines;
 
     private final List<Field> fields = new ArrayList<>();
     private final List<Consumer<EventResult>> observers = new ArrayList<>();
@@ -24,6 +24,10 @@ public class GameBoard implements FieldObserver {
         generateFields();
         associateNeighbors();
         raffleMines();
+    }
+
+    public void forEachField(Consumer<Field> function) {
+        fields.forEach(function);
     }
 
     public void registerObserver(Consumer<EventResult> observer) {
@@ -46,6 +50,7 @@ public class GameBoard implements FieldObserver {
         fields
                 .stream()
                 .filter(Field::getMined)
+                .filter(field -> !field.getMarked())
                 .forEach(field -> field.setOpened(true));
 
         fields.forEach(field -> field.setOpened(true));
@@ -132,12 +137,22 @@ public class GameBoard implements FieldObserver {
 
     public void fire(Field field, FieldEvent event) {
         if (event == FieldEvent.EXPLODE) {
-            System.out.println("Lost");
-            this.notifyObservers(false);
             this.showMines();
-        } else {
-            System.out.println("Win");
+            this.notifyObservers(false);
+        } else if (this.goalAchieved()) {
             this.notifyObservers(true);
         }
+    }
+
+    public Integer getLines() {
+        return lines;
+    }
+
+    public Integer getColumns() {
+        return columns;
+    }
+
+    public Integer getMines() {
+        return mines;
     }
 }

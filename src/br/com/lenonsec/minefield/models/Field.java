@@ -64,14 +64,19 @@ public class Field {
         if (opened) notifyObservers(FieldEvent.OPEN);
     }
 
-    void toggleMarker() {
-        marked = !marked;
+    public void toggleMarker() {
+        if (!opened) {
+            marked = !marked;
 
-        if (marked) notifyObservers(FieldEvent.MARK);
-        else notifyObservers(FieldEvent.UNMARK);
+            if (marked) {
+                notifyObservers(FieldEvent.MARK);
+            } else {
+                notifyObservers(FieldEvent.UNMARK);
+            }
+        }
     }
 
-    Boolean open() {
+    public Boolean open() {
         if (!opened && !marked) {
             if (mined) {
                 notifyObservers(FieldEvent.EXPLODE);
@@ -86,12 +91,12 @@ public class Field {
             }
 
             return true;
+        } else {
+            return false;
         }
-
-        return false;
     }
 
-    Boolean safeNeighborhood() {
+    public Boolean safeNeighborhood() {
         return neighbors.stream().noneMatch(Field::getMined);
     }
 
@@ -106,14 +111,15 @@ public class Field {
         return unraveledField || protectedField;
     }
 
-    Long minesInNeighborhood() {
-        return neighbors.stream().filter(Field::getMined).count();
+    public Integer minesInNeighborhood() {
+        return Math.toIntExact(neighbors.stream().filter(Field::getMined).count());
     }
 
     void restart() {
-        mined = false;
         opened = false;
+        mined = false;
         marked = false;
+        this.notifyObservers(FieldEvent.RESTART);
     }
 
     public String toString() {
